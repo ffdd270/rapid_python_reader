@@ -1,12 +1,12 @@
 extern crate core;
 
-use std::fmt::format;
 use std::string::String;
-use std::thread::panicking;
-use calamine::{Reader, open_workbook, Xlsx, DataType};
+use calamine::{Reader, open_workbook, Xlsx, DataType, Range};
 use std::time::{Duration, SystemTime};
 
-fn get_sheet( xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> String {
+
+fn get_sheets_and_index_to_id(xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> (Vec<String>, Vec<(String, Range<DataType>)>)
+{
     let error_string = format!("Failed to open workbook {}",  xlsx_path);
     //open workbook
     let mut workbook : Xlsx<_> = open_workbook(xlsx_path).expect(error_string.as_str());
@@ -20,36 +20,73 @@ fn get_sheet( xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> String
     let range = &worksheet.1;
     println!("worksheet {} reading.", worksheet.0);
     //println!("cell count : {}", range.get_size().0 * range.get_size().1);
-    let objects_string = "";
-    let mut index_to_id : Vec<&str>  = Vec::new();
+    let mut index_to_id : Vec<String>  = Vec::new();
 
     // row id index searching.
     let id_row_range = range.range((id_row_index, 0), (id_row_index, range.get_size().1 as u32));
 
     id_row_range.cells().for_each(| cell| {
         match cell.2.get_string() {
-            Some(str) => index_to_id.push(str),
+            Some(str) => index_to_id.push(str.to_string()),
             None => {}
         };
     });
 
+    return (index_to_id, workbook.worksheets());
+}
+
+fn row_to_push_string( ref_string : &mut String, index_to_id : &Vec<String>, row : &[DataType]) {
+    ref_string.clear();
+    ref_string.push_str("{");
+
+    row.iter().enumerate().for_each(|(index, cell)| {
+        match cell.get_string() {
+            Some(str) => {
+                ref_string.push_str( format!("\"{}\": {},", index_to_id[index], str).as_str() );
+            },
+            None => {}
+        };
+    });
+
+    ref_string.push_str( "}," );
+}
+
+fn get_sheet( xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> String {
+    let (index_to_id, sheets) = get_sheets_and_index_to_id(xlsx_path, sheet_index, id_row_index);
     println!("index to id index : {:?}", index_to_id);;
+
+    let range = &sheets[sheet_index as usize].1;
 
     let mut result_string = String::new();
     for row in range.range( (id_row_index + 1, 0), (range.get_size().0 as u32, range.get_size().1 as u32) ).rows() {
-        result_string.clear();
-        result_string.push_str("{");
+        row_to_push_string(&mut result_string, &index_to_id, row);
+    }
 
-        row.iter().enumerate().for_each(|(index, cell)| {
-            match cell.get_string() {
-                Some(str) => {
-                    result_string.push_str( format!("\"{}\": {},", index_to_id[index], str).as_str() );
-                },
-                None => {}
-            };
-        });
+    println!("{}", result_string);
 
-        result_string.push_str( "}," );
+    return result_string;
+}
+
+fn get_rows_by_id( xlsx_path : &str, sheet_index : u32, id_row_index : u32, find_id : &str) -> String {
+    let (index_to_id, sheets) = get_sheets_and_index_to_id(xlsx_path, sheet_index, id_row_index);
+    println!("index to id index : {:?}", index_to_id);;
+
+    let range = &sheets[sheet_index as usize].1;
+    let mut id_find = false;
+    let mut result_string = String::new();
+    for row in range.range( (id_row_index + 1, 0), (range.get_size().0 as u32, range.get_size().1 as u32) ).rows() {
+        if row[0].to_string() != find_id || !(id_find && row[0].is_empty()) {
+            if id_find {
+                break;
+            }
+            else {
+                continue;
+            }
+        }
+        else {
+            id_find = true;
+            row_to_push_string(&mut result_string, &index_to_id, row);
+        }
     }
 
     println!("{}", result_string);
@@ -120,4 +157,20 @@ fn main()
     };
 
     println!("total time : {}", elapsed.as_millis() - current_elapsed.as_millis());
+
+    let find_ch00 = SystemTime::now();
+    get_rows_by_id(path, 0, 1, "CH01_003_5");
+    let find_ch00_elapsed = match find_ch00.elapsed() {
+        Err(e) => panic!("{}", e),
+        Ok(t) => t,
+    };
+
+    let find_ch00_current_elapsed = match SystemTime::now().elapsed() {
+        Err(e) => panic!("{}", e),
+        Ok(t) => t
+    };
+
+
+    println!("find ch00_000 total time : {}", find_ch00_elapsed.as_millis() - find_ch00_current_elapsed.as_millis());
+
 }
