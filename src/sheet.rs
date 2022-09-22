@@ -38,15 +38,20 @@ pub mod sheet
         //ref_string.clear();
         ref_string.push_str("{");
 
+        let mut iter_string = String::new();
+
+
         row.iter().enumerate().for_each(|(index, cell)| {
             match cell.get_string() {
                 Some(str) => {
-                    ref_string.push_str( format!("\"{}\": \"{}\",", index_to_id[index], str).as_str() );
+                    iter_string.push_str(format!("\"{}\": \"{}\",", index_to_id[index], str).as_str());
                 },
                 None => {}
             };
         });
 
+        iter_string.pop();
+        ref_string.push_str(iter_string.as_str());
         ref_string.push_str( "}," );
     }
 
@@ -57,9 +62,12 @@ pub mod sheet
         let range = &sheets[sheet_index as usize].1;
 
         let mut result_string = String::new();
+        result_string.push_str("[" );
         for row in range.range( (id_row_index + 1, 0), (range.get_size().0 as u32, range.get_size().1 as u32) ).rows() {
             row_to_push_string(&mut result_string, &index_to_id, row);
         }
+        result_string.push_str("]" );
+
 
         //println!("{}", result_string);
 
@@ -73,6 +81,7 @@ pub mod sheet
         let range = &sheets[sheet_index as usize].1;
         let mut id_find = false;
         let mut result_string = String::new();
+        result_string.push_str("[" );
         for row in range.range( (id_row_index + 1, 0), (range.get_size().0 as u32, range.get_size().1 as u32) ).rows() {
 
             //println!("row[0].to_string() {}", row[0].to_string());
@@ -93,6 +102,8 @@ pub mod sheet
         if !id_find {
             return None;
         }
+        result_string.pop(); // 마지막에 쉼표 제거
+        result_string.push_str("]" );
 
         return Some(result_string);
     }

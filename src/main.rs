@@ -2,7 +2,8 @@ extern crate core;
 
 mod sheet;
 
-use std::string::String;
+use std::fs::File;
+use std::io::{Error, Write};
 use std::time::{Duration, SystemTime};
 use crate::sheet::sheet::{get_sheet, get_rows_by_id};
 
@@ -40,6 +41,10 @@ fn main()
         Some(result) => {
             println!("Found ID {}", find_id);
             println!("{}", result);
+
+            let path = "sample.json";
+            let mut output =  File::create(path).unwrap();
+            write!(output, "{}", result.as_str()).expect("FILE CANT WRITE.");
         },
         None => println!("Not found ID {}", find_id)
     };
