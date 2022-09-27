@@ -1,10 +1,12 @@
 
 pub mod sheet
 {
+    use std::collections::HashMap;
+    use std::hash::Hash;
     use std::io::Error;
     use std::string::String;
     use calamine::{Reader, open_workbook, Xlsx, DataType, Range};
-    pub fn get_sheets_and_index_to_id(xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> (Vec<String>, Vec<(String, Range<DataType>)>)
+    pub fn get_sheets_and_index_to_id(xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> (HashMap<usize, String>, Vec<(String, Range<DataType>)>)
     {
         let error_string = format!("Failed to open workbook {}",  xlsx_path);
         //open workbook
@@ -19,22 +21,22 @@ pub mod sheet
         let range = &worksheet.1;
         println!("worksheet {} reading.", worksheet.0);
         //println!("cell count : {}", range.get_size().0 * range.get_size().1);
-        let mut index_to_id : Vec<String>  = Vec::new();
+        let mut index_to_id : HashMap<usize, String>  = HashMap::new();
 
         // row id index searching.
         let id_row_range = range.range((id_row_index, 0), (id_row_index, range.get_size().1 as u32));
 
         id_row_range.cells().for_each(| cell| {
             match cell.2.get_string() {
-                Some(str) => index_to_id.push(str.to_string()),
-                None => {}
+                Some(str) => index_to_id.insert(cell.1,str.to_string()),
+                None => { None }
             };
         });
 
         return (index_to_id, workbook.worksheets());
     }
 
-    pub fn row_to_push_string( ref_string : &mut String, index_to_id : &Vec<String>, row : &[DataType]) {
+    pub fn row_to_push_string( ref_string : &mut String, index_to_id : &HashMap<usize, String>, row : &[DataType]) {
         //ref_string.clear();
         ref_string.push_str("{");
 
@@ -44,7 +46,12 @@ pub mod sheet
         row.iter().enumerate().for_each(|(index, cell)| {
             match cell.get_string() {
                 Some(str) => {
-                    iter_string.push_str(format!("\"{}\": \"{}\",", index_to_id[index], str).as_str());
+                    match index_to_id.get(&index)  {
+                        Some(id) => {
+                            iter_string.push_str(format!("\"{}\": \"{}\",", id, str).as_str());
+                        },
+                        None => {}
+                    }
                 },
                 None => {}
             };

@@ -13,9 +13,9 @@ fn main()
 {
     let mut args_iter = env::args().enumerate();
 
-    if env::args().count() != 3
+    if env::args().count() != 4
     {
-        println!("use this usage : rapid_python_reader <xlsx_path> <output_path?>");
+        println!("use this usage : rapid_python_reader <xlsx_path> <output_path> <target_id>");
         return;
     };
 
@@ -26,25 +26,10 @@ fn main()
     // 여기서 as_str하면 임시값의 생명 주기가 박살나서 안 됨.
     let path = args_iter.next().unwrap().1;
     let output_path = args_iter.next().unwrap().1;
-
-    // opens a new workbook
-    get_sheet(path.as_str(), 0,1);
-
-    let elapsed = match begin_sys_time.elapsed() {
-        Err(e) => panic!("{}", e),
-        Ok(t) => t,
-    };
-
-    let current_elapsed = match SystemTime::now().elapsed() {
-        Err(e) => panic!("{}", e),
-        Ok(t) => t
-    };
-
-    println!("total time : {}", elapsed.as_millis() - current_elapsed.as_millis());
+    let find_id = args_iter.next().unwrap().1;
 
     let find_ch00 = SystemTime::now();
-    let find_id = "CH01_001_1";
-    let result = get_rows_by_id(path.as_str(), 0, 1, find_id);
+    let result = get_rows_by_id(path.as_str(), 0, 1, find_id.as_str());
     let find_ch00_elapsed = match find_ch00.elapsed() {
         Err(e) => panic!("{}", e),
         Ok(t) => t,
@@ -53,7 +38,7 @@ fn main()
     match result {
         Some(result) => {
             println!("Found ID {}", find_id);
-            println!("{}", result);
+            //println!("{}", result);
 
             let mut output =  File::create(output_path).unwrap();
             write!(output, "{}", result.as_str()).expect("FILE CANT WRITE.");
