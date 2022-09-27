@@ -7,10 +7,6 @@ pub fn add(left: usize, right: usize) -> usize {
 use crate::sheet::sheet::{get_sheet, get_rows_by_id};
 use pyo3::prelude::*;
 
-#[pyfunction]
-pub fn get_sheet_from_rust( path : &str, sheet_index : u32, id_row_index :  u32) -> PyResult<String> {
-    return Ok(get_sheet(path, sheet_index, id_row_index));
-}
 
 #[cfg(test)]
 mod tests {

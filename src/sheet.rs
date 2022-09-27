@@ -2,15 +2,25 @@
 pub mod sheet
 {
     use std::collections::HashMap;
+    use std::fs::File;
     use std::hash::Hash;
-    use std::io::Error;
+    use std::io::{BufReader, Error};
     use std::string::String;
     use calamine::{Reader, open_workbook, Xlsx, DataType, Range};
-    pub fn get_sheets_and_index_to_id(xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> (HashMap<usize, String>, Vec<(String, Range<DataType>)>)
+
+    type SheetAndIndex = (HashMap<usize, String>, Vec<(String, Range<DataType>)>);
+    pub fn get_sheets_and_index_to_id(xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> Option<SheetAndIndex>
     {
         let error_string = format!("Failed to open workbook {}",  xlsx_path);
         //open workbook
-        let mut workbook : Xlsx<_> = open_workbook(xlsx_path).expect(error_string.as_str());
+        let mut workbook_option : Option<Xlsx<BufReader<File>>> = None;
+
+        match open_workbook::<Xlsx<_>, &str>(xlsx_path) {
+            Ok(xlsx) => { workbook_option = Some(xlsx); },
+            Err(e) => { println!("{}",e); return None; }
+        }
+
+        let mut workbook = workbook_option.unwrap();
 
         if workbook.worksheets().len() <= sheet_index as usize {
             panic!("{}",error_string.as_str());
@@ -33,7 +43,7 @@ pub mod sheet
             };
         });
 
-        return (index_to_id, workbook.worksheets());
+        return Some((index_to_id, workbook.worksheets()));
     }
 
     pub fn row_to_push_string( ref_string : &mut String, index_to_id : &HashMap<usize, String>, row : &[DataType]) {
@@ -62,9 +72,19 @@ pub mod sheet
         ref_string.push_str( "}," );
     }
 
-    pub fn get_sheet( xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> String {
-        let (index_to_id, sheets) = get_sheets_and_index_to_id(xlsx_path, sheet_index, id_row_index);
-        println!("index to id index : {:?}", index_to_id);;
+    pub fn get_sheet( xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> Option<String> {
+        let sheet_and_index_option : _ = get_sheets_and_index_to_id(xlsx_path, sheet_index, id_row_index);
+
+        let mut option_data : Option<SheetAndIndex> = None;
+        match sheet_and_index_option {
+            Some((index_to_id, sheets)) => {
+                option_data = Some((index_to_id, sheets));
+            },
+            None => {return None;}
+        }
+
+        let (index_to_id, sheets) = option_data.unwrap();
+        println!("index to id index : {:?}", index_to_id);
 
         let range = &sheets[sheet_index as usize].1;
 
@@ -78,11 +98,21 @@ pub mod sheet
 
         //println!("{}", result_string);
 
-        return result_string;
+        return Some(result_string);
     }
 
     pub fn get_rows_by_id( xlsx_path : &str, sheet_index : u32, id_row_index : u32, find_id : &str) -> Option<String> {
-        let (index_to_id, sheets) = get_sheets_and_index_to_id(xlsx_path, sheet_index, id_row_index);
+        let sheet_and_index_option : _ = get_sheets_and_index_to_id(xlsx_path, sheet_index, id_row_index);
+
+        let mut option_data : Option<SheetAndIndex> = None;
+        match sheet_and_index_option {
+            Some((index_to_id, sheets)) => {
+                option_data = Some((index_to_id, sheets));
+            },
+            None => {return None;}
+        }
+
+        let (index_to_id, sheets) = option_data.unwrap();
         println!("index to id index : {:?}", index_to_id);;
 
         let range = &sheets[sheet_index as usize].1;
