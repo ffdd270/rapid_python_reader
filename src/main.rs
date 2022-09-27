@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::{Write};
 use std::time::{SystemTime};
 use crate::sheet::sheet::{get_sheet, get_rows_by_id};
-
+use std::time::Instant;
 
 fn main()
 {
@@ -28,7 +28,7 @@ fn main()
     let output_path = args_iter.next().unwrap().1;
     let find_id = args_iter.next().unwrap().1;
 
-    let find_id_begin_time = SystemTime::now().elapsed().unwrap().as_millis();
+    let instant = Instant::now();
 
     let result_option : Option<String>;
 
@@ -48,7 +48,6 @@ fn main()
         None => println!("Not found ID {}", find_id)
     };
 
-    let find_id_end_time = SystemTime::now().elapsed().unwrap().as_millis();
-    println!("find id total time : {}", find_id_begin_time - find_id_end_time);
+    println!("find id total time : {:.2?}", instant.elapsed());
 
 }
