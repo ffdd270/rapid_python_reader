@@ -7,6 +7,7 @@ pub mod sheet
     use std::io::{BufReader, Error};
     use std::string::String;
     use calamine::{Reader, open_workbook, Xlsx, DataType, Range};
+    use serde_json::{Value};
 
     type SheetAndIndex = (HashMap<usize, String>, Vec<(String, Range<DataType>)>);
     pub fn get_sheets_and_index_to_id(xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> Option<SheetAndIndex>
@@ -72,6 +73,28 @@ pub mod sheet
         ref_string.push_str( "}," );
     }
 
+
+
+    pub fn row_to_push_json( ref_json : &mut Vec<serde_json::Value>, index_to_id : &HashMap<usize, String>, row : &[DataType]) {
+        let mut json = serde_json::json!({});
+
+        row.iter().enumerate().for_each(|(index, cell)| {
+            match cell.get_string() {
+                Some(str) => {
+                    match index_to_id.get(&index)  {
+                        Some(id) => {
+                            json[id] = str.into();
+                        },
+                        None => {}
+                    }
+                },
+                None => {}
+            };
+        });
+
+        ref_json.push(json );
+    }
+
     pub fn get_sheet( xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> Option<String> {
         let sheet_and_index_option : _ = get_sheets_and_index_to_id(xlsx_path, sheet_index, id_row_index);
 
@@ -88,17 +111,14 @@ pub mod sheet
 
         let range = &sheets[sheet_index as usize].1;
 
-        let mut result_string = String::new();
-        result_string.push_str("[" );
+        let mut value_vector : Vec<serde_json::Value> = Vec::new();
+
         for row in range.range( (id_row_index + 1, 0), (range.get_size().0 as u32, range.get_size().1 as u32) ).rows() {
-            row_to_push_string(&mut result_string, &index_to_id, row);
+            row_to_push_json(&mut value_vector, &index_to_id, row);
         }
-        result_string.push_str("]" );
 
-
-        //println!("{}", result_string);
-
-        return Some(result_string);
+        let json_value = Value::Array(value_vector);
+        return Some(serde_json::to_string_pretty(&json_value).unwrap());
     }
 
     pub fn get_rows_by_id( xlsx_path : &str, sheet_index : u32, id_row_index : u32, find_id : &str) -> Option<String> {
