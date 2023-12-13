@@ -8,7 +8,7 @@ use std::fs::File;
 use std::io::{Write};
 use std::time::{SystemTime};
 use std::env::Args;
-use crate::sheet::sheet::{get_sheet, get_rows_by_id};
+use crate::sheet::sheet::{get_sheet, get_rows_by_id, get_main_id_list};
 use std::time::Instant;
 use std::fs;
 use std::io;
@@ -27,18 +27,29 @@ fn export_sheet( path : &str, mut args_iter : &mut std::iter::Enumerate<std::env
 
     let result_option : Option<String>;
 
-    if find_id != "sheet_export" {
+    if find_id == "get_main_id_list" {
+        result_option = get_main_id_list(path, 0, 1);
+    }
+    else if find_id != "sheet_export" {
         result_option = get_rows_by_id(path, 0, 1, find_id.as_str());
     }
     else {
         result_option = get_sheet(path, 0, 1 );
     }
 
+
     match result_option {
         Some(result) => {
             println!("Found ID {}", find_id);
-            let mut output =  File::create(output_path).unwrap();
-            write!(output, "{}", result.as_str()).expect("FILE CANT WRITE.");
+            if (output_path !=  "stdout")
+            {
+                let mut output =  File::create(output_path).unwrap();
+                write!(output, "{}", result.as_str()).expect("FILE CANT WRITE.");
+            }
+            else
+            {
+                println!("EXPORT_STD_OUT_START,{}", result.as_str());
+            }
         },
         None => println!("Not found ID {}", find_id)
     };

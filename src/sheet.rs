@@ -30,7 +30,7 @@ pub mod sheet
         let worksheet = &workbook.worksheets()[sheet_index as usize];
 
         let range = &worksheet.1;
-        println!("worksheet {} reading.", worksheet.0);
+        //println!("worksheet {} reading.", worksheet.0);
         //println!("cell count : {}", range.get_size().0 * range.get_size().1);
         let mut index_to_id : HashMap<usize, String>  = HashMap::new();
 
@@ -107,7 +107,7 @@ pub mod sheet
         }
 
         let (index_to_id, sheets) = option_data.unwrap();
-        println!("index to id index : {:?}", index_to_id);
+        //println!("index to id index : {:?}", index_to_id);
 
         let range = &sheets[sheet_index as usize].1;
 
@@ -119,6 +119,46 @@ pub mod sheet
 
         let json_value = Value::Array(value_vector);
         return Some(serde_json::to_string_pretty(&json_value).unwrap());
+    }
+
+    pub fn get_main_id_list( xlsx_path : &str, sheet_index : u32, id_row_index : u32) -> Option<String> {
+        let sheet_and_index_option : _ = get_sheets_and_index_to_id(xlsx_path, sheet_index, id_row_index);
+
+        let mut option_data : Option<SheetAndIndex> = None;
+        match sheet_and_index_option {
+            Some((index_to_id, sheets)) => {
+                option_data = Some((index_to_id, sheets));
+            },
+            None => {return None;}
+        }
+
+        let (index_to_id, sheets) = option_data.unwrap();
+        //println!("index to id index : {:?}", index_to_id);
+
+        let range = &sheets[sheet_index as usize].1;
+
+
+        let mut result_str = String::new();
+
+        for row in range.range( (id_row_index + 1, 0), (range.get_size().0 as u32, range.get_size().1 as u32) ).rows() {
+            match row[0].get_string() {
+                Some(str) => {
+                    match index_to_id.get(&0)  {
+                        Some(id) => {
+                            // String => Object
+                            // &str => View용 객체 (Read만)
+                            result_str.push_str((str.to_owned() + ",").as_str());
+                        },
+                        None => {}
+                    }
+                },
+                None => {}
+            };
+        }
+
+        result_str.remove(result_str.len() - 1); // 마지막에 쉼표 제거
+
+        return Some(result_str);
     }
 
     pub fn get_rows_by_id( xlsx_path : &str, sheet_index : u32, id_row_index : u32, find_id : &str) -> Option<String> {
@@ -133,7 +173,7 @@ pub mod sheet
         }
 
         let (index_to_id, sheets) = option_data.unwrap();
-        println!("index to id index : {:?}", index_to_id);;
+        //println!("index to id index : {:?}", index_to_id);;
 
         let range = &sheets[sheet_index as usize].1;
         let mut id_find = false;
